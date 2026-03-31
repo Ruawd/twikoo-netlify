@@ -1,0 +1,40 @@
+name: Auto Update Twikoo
+
+on:
+  schedule:
+    # 每天北京时间早上 8 点自动执行检查 (UTC时间 0点)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 允许你随时在面板里手动点击运行
+
+jobs:
+  update-twikoo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Update twikoo-netlify package
+        run: |
+          # 这一步会自动把 package.json 里的版本拉到最新
+          npm install twikoo-netlify@latest
+
+      - name: Check for Changes and Commit
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          
+          # 如果发现版本有更新（文件有变动），就会自动 Commit 并 Push
+          # Push 会直接触发 Netlify 进行部署构建
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: auto update twikoo-netlify to latest"
+            git push
+            echo "发现新版本，已自动提交并触发 Netlify 部署！"
+          else
+            echo "已经是最新版本，无需更新。"
+          fi
